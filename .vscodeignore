@@ -30,3 +30,4 @@ README.zh-CN.md
 .codegraph/
 pnpm-workspace.yaml
 .claude
+scripts/**

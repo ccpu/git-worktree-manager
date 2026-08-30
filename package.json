@@ -1251,7 +1251,8 @@
     "prettier": "prettier . --write",
     "test:unit": "rstest",
     "test:unit:watch": "rstest --watch",
-    "check-types": "tsc --noEmit"
+    "check-types": "tsc --noEmit",
+    "install:local": "node ./scripts/install-local.js"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
