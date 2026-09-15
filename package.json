@@ -667,6 +667,11 @@
           "group": "inline@100"
         },
         {
+          "command": "git-worktree-manager.removeWorktree",
+          "when": "viewItem =~ /git-worktree-manager.worktreeItem/ && !(viewItem =~ /git-worktree-manager\\.worktreeItem(.*)\\.main/)",
+          "group": "worktree-delete"
+        },
+        {
           "group": "worktree-action",
           "when": "viewItem =~ /git-worktree-manager.worktreeItem/ && !(viewItem =~ /git-worktree-manager\\.worktreeItem(.*)\\.main/)",
           "submenu": "worktree-action"
