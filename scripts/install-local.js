@@ -7,6 +7,9 @@
  *   2. Packages a .vsix with the local @vscode/vsce devDependency.
  *   3. Installs/updates it into VS Code with `code --install-extension --force`.
  *
+ * Local packages use a separate publisher so Marketplace updates do not apply.
+ * The Marketplace copy is removed during installation to avoid duplicate commands.
+ *
  * After it finishes, the extension is available in EVERY VS Code window.
  * Reload the window (Ctrl+Shift+P -> "Developer: Reload Window") or restart
  * VS Code to pick up the new build.
@@ -127,7 +130,7 @@ function installedVersion(cli, extId) {
 }
 
 // --- main --------------------------------------------------------------------
-function main() {
+async function main() {
     console.log(colors.cyan(`==> Repo: ${repoRoot}`));
 
     if (!which('pnpm')) {
@@ -142,9 +145,11 @@ function main() {
     }
 
     const pkg = JSON.parse(fs.readFileSync(path.join(repoRoot, 'package.json'), 'utf8'));
-    const vsixName = `${pkg.name}-${pkg.version}.vsix`;
+    const localPublisher = `${pkg.publisher}-local`;
+    const vsixName = `${pkg.name}-local-${pkg.version}.vsix`;
     const vsixPath = path.join(repoRoot, vsixName);
-    const extId = `${pkg.publisher}.${pkg.name}`;
+    const extId = `${localPublisher}.${pkg.name}`;
+    const marketplaceId = `${pkg.publisher}.${pkg.name}`;
     console.log(colors.cyan(`==> Extension: ${extId}@${pkg.version}`));
 
     // 0. Refuse to reinstall over an identical version. VS Code only picks up a
@@ -153,6 +158,7 @@ function main() {
     // different version is already installed, remember it so we can uninstall it
     // first and replace it cleanly.
     const existingVersion = installedVersion(resolvedCodeCli, extId);
+    const marketplaceVersion = installedVersion(resolvedCodeCli, marketplaceId);
     if (existingVersion === pkg.version) {
         throw new Error(
             `'${extId}' ${pkg.version} is already installed. Bump the "version" in ` +
@@ -182,7 +188,8 @@ function main() {
     // node_modules is excluded via .vscodeignore and everything is bundled by
     // rspack into dist/, so package with --no-dependencies.
     console.log(colors.yellow('==> Packaging .vsix...'));
-    run(['pnpm', 'exec', 'vsce', 'package', '--no-dependencies', '--out', q(vsixPath)]);
+    const packageLocal = require('./package-local');
+    await packageLocal(repoRoot, vsixPath, localPublisher);
 
     // 4. Uninstall the previously installed version (if any), then install.
     if (existingVersion) {
@@ -191,6 +198,10 @@ function main() {
     }
     console.log(colors.yellow(`==> Installing into '${codeCli}'...`));
     run([resolvedCodeCli, '--install-extension', q(vsixPath), '--force']);
+    if (marketplaceVersion) {
+        console.log(colors.yellow(`==> Removing Marketplace copy ${marketplaceId}@${marketplaceVersion}...`));
+        run([resolvedCodeCli, '--uninstall-extension', marketplaceId]);
+    }
 
     // 5. Cleanup
     if (!keepVsix) {
@@ -205,9 +216,7 @@ function main() {
     console.log(colors.green("Reload VS Code (Ctrl+Shift+P -> 'Developer: Reload Window') to use the new build."));
 }
 
-try {
-    main();
-} catch (err) {
+main().catch((err) => {
     console.error(`\x1b[31mERROR:\x1b[0m ${err.message}`);
     process.exit(1);
-}
+});

@@ -11,6 +11,7 @@ rstest.config.js
 vsc-extension-quickstart.md
 pnpm-lock.yaml
 .pnpm*
+.pnpm-store/**
 **/tsconfig.json
 **/.eslintrc.json
 **/eslint.config.mjs
